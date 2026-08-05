@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle2, Truck, CreditCard, Banknote } from 'lucide-react';
+import { CheckCircle2, Truck, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import Header from '@/components/site/header';
 import Footer from '@/components/site/footer';
@@ -18,11 +19,21 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [placing, setPlacing] = useState(false);
   const [order, setOrder] = useState(null);
+  const [rzpConfigured, setRzpConfigured] = useState(false);
+  const [rzpKeyId, setRzpKeyId] = useState(null);
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
     line1: '', city: 'Hyderabad', state: 'Telangana', pincode: '', landmark: '',
-    payment: 'cod',
+    payment: 'razorpay',
   });
+
+  useEffect(() => {
+    axios.get('/api/razorpay/config').then(({ data }) => {
+      setRzpConfigured(!!data.configured);
+      setRzpKeyId(data.keyId || null);
+      if (!data.configured) setForm((f) => ({ ...f, payment: 'cod' }));
+    }).catch(() => {});
+  }, []);
 
   if (order) {
     return (
@@ -38,6 +49,7 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order ID</span><span className="font-mono font-medium">{order.id}</span></div>
             <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Total</span><span className="font-serif text-lg text-maroon font-bold">₹{order.total.toLocaleString('en-IN')}</span></div>
             <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment</span><span className="font-medium">{order.payment === 'cod' ? 'Cash on Delivery' : 'Razorpay'}</span></div>
+            {order.razorpayPaymentId && <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment ID</span><span className="font-mono text-xs">{order.razorpayPaymentId}</span></div>}
             <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Status</span><span className="font-medium text-green-700">{order.status}</span></div>
           </div>
           <div className="flex gap-3 mt-8 justify-center">
@@ -70,19 +82,75 @@ export default function CheckoutPage() {
     setStep(step + 1);
   };
 
+  const openRazorpay = ({ keyId, razorpayOrderId, amount, currency, internalOrderId }) => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined' || !window.Razorpay) {
+        reject(new Error('Razorpay SDK not loaded. Please refresh and try again.'));
+        return;
+      }
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount,
+        currency,
+        order_id: razorpayOrderId,
+        name: 'Samatha Reddy Boutique',
+        description: `Order ${internalOrderId}`,
+        image: '/favicon.ico',
+        prefill: { name: form.name, email: form.email, contact: form.phone },
+        notes: { address: form.line1, city: form.city },
+        theme: { color: '#722F37' },
+        handler: async (result) => {
+          try {
+            const { data } = await axios.post('/api/razorpay/verify', {
+              orderId: internalOrderId,
+              razorpay_order_id: result.razorpay_order_id,
+              razorpay_payment_id: result.razorpay_payment_id,
+              razorpay_signature: result.razorpay_signature,
+            });
+            if (data.ok && data.status === 'Confirmed') {
+              resolve(data.order);
+            } else {
+              reject(new Error(data.error || 'Payment could not be confirmed'));
+            }
+          } catch (e) {
+            reject(new Error(e.response?.data?.error || 'Payment verification failed'));
+          }
+        },
+        modal: {
+          ondismiss: () => reject(new Error('Payment cancelled')),
+        },
+      });
+      rzp.on('payment.failed', (resp) => reject(new Error(resp.error?.description || 'Payment failed')));
+      rzp.open();
+    });
+  };
+
   const placeOrder = async () => {
     setPlacing(true);
     try {
-      const { data } = await axios.post('/api/orders', {
+      const { data: createRes } = await axios.post('/api/orders', {
         items, customer: { name: form.name, phone: form.phone, email: form.email },
         address: { line1: form.line1, city: form.city, state: form.state, pincode: form.pincode, landmark: form.landmark },
         payment: form.payment,
         subtotal, shipping, total,
       });
-      setOrder(data.order);
+      const internalOrder = createRes.order;
+
+      if (form.payment === 'cod') {
+        setOrder(internalOrder);
+        clear();
+        setPlacing(false);
+        return;
+      }
+
+      // Razorpay flow
+      const { data: rzpOrder } = await axios.post('/api/razorpay/order', { orderId: internalOrder.id });
+      const confirmed = await openRazorpay(rzpOrder);
+      setOrder(confirmed);
       clear();
     } catch (e) {
-      toast.error('Failed to place order');
+      const msg = e.response?.data?.error || e.message || 'Failed to place order';
+      toast.error(msg);
     } finally {
       setPlacing(false);
     }
@@ -90,6 +158,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Header />
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-serif text-4xl text-maroon-dark mb-2">Checkout</h1>
@@ -125,15 +194,22 @@ export default function CheckoutPage() {
             {step === 2 && (
               <div className="space-y-4">
                 <h2 className="font-serif text-2xl text-maroon-dark flex items-center gap-2"><CreditCard className="w-5 h-5" /> Payment Method</h2>
+                {!rzpConfigured && (
+                  <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3">
+                    Razorpay keys not configured on the server. Add <code className="font-mono">RAZORPAY_KEY_ID</code>, <code className="font-mono">RAZORPAY_KEY_SECRET</code> and <code className="font-mono">NEXT_PUBLIC_RAZORPAY_KEY_ID</code> to <code className="font-mono">.env</code>, then restart the server to enable online payment. COD is available meanwhile.
+                  </div>
+                )}
                 <RadioGroup value={form.payment} onValueChange={(v) => setForm({ ...form, payment: v })} className="space-y-3">
-                  <label className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer ${form.payment === 'razorpay' ? 'border-maroon bg-cream' : 'border-border'}`}>
-                    <RadioGroupItem value="razorpay" id="razorpay" />
+                  <label className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer ${form.payment === 'razorpay' ? 'border-maroon bg-cream' : 'border-border'} ${!rzpConfigured ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <RadioGroupItem value="razorpay" id="razorpay" disabled={!rzpConfigured} />
                     <CreditCard className="w-5 h-5 text-maroon" />
                     <div className="flex-1">
-                      <div className="font-medium">Razorpay (Card / UPI / Netbanking)</div>
+                      <div className="font-medium">Razorpay (Card / UPI / Netbanking / Wallets)</div>
                       <div className="text-xs text-muted-foreground">Secure payment powered by Razorpay</div>
                     </div>
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-gold/20 text-gold-dark uppercase tracking-wider">Preview</span>
+                    {rzpConfigured
+                      ? <span className="text-[10px] px-2 py-1 rounded-full bg-green-100 text-green-700 uppercase tracking-wider">Live</span>
+                      : <span className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">Not configured</span>}
                   </label>
                   <label className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer ${form.payment === 'cod' ? 'border-maroon bg-cream' : 'border-border'}`}>
                     <RadioGroupItem value="cod" id="cod" />
@@ -164,7 +240,13 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-3"><Button variant="outline" onClick={() => setStep(2)}>Back</Button><Button onClick={placeOrder} disabled={placing} className="bg-maroon hover:bg-maroon-light text-cream flex-1">{placing ? 'Placing...' : `Place Order – ₹${total.toLocaleString('en-IN')}`}</Button></div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep(2)} disabled={placing}>Back</Button>
+                  <Button onClick={placeOrder} disabled={placing} className="bg-maroon hover:bg-maroon-light text-cream flex-1">
+                    {placing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{form.payment === 'razorpay' ? 'Opening payment…' : 'Placing order…'}</> : (form.payment === 'razorpay' ? `Pay ₹${total.toLocaleString('en-IN')} with Razorpay` : `Place Order – ₹${total.toLocaleString('en-IN')}`)}
+                  </Button>
+                </div>
+                {form.payment === 'razorpay' && <p className="text-[11px] text-muted-foreground">You'll be redirected to Razorpay's secure checkout to complete the payment.</p>}
               </div>
             )}
           </div>

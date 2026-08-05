@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'node:crypto';
+import Razorpay from 'razorpay';
 import { getDb } from '@/lib/mongo';
 import { generateProducts, CATEGORIES_DATA, TESTIMONIALS } from '@/lib/products-data';
+
+export const runtime = 'nodejs';
+
+function getRazorpay() {
+  const key_id = process.env.RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!key_id || !key_secret) return null;
+  return new Razorpay({ key_id, key_secret });
+}
+
+function safeEqualHex(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  try {
+    const A = Buffer.from(a, 'hex');
+    const B = Buffer.from(b, 'hex');
+    return A.length === B.length && crypto.timingSafeEqual(A, B);
+  } catch { return false; }
+}
 
 async function ensureSeeded() {
   const db = await getDb();
@@ -109,13 +129,121 @@ async function router(req, method, segments) {
       subtotal: body.subtotal || 0,
       shipping: body.shipping || 0,
       total: body.total || 0,
-      status: 'Pending',
-      timeline: [{ status: 'Pending', at: new Date().toISOString(), note: 'Order placed' }],
+      totalPaise: Math.round((body.total || 0) * 100),
+      status: body.payment === 'razorpay' ? 'PaymentPending' : 'Pending',
+      razorpayOrderId: null,
+      razorpayPaymentId: null,
+      timeline: [{ status: body.payment === 'razorpay' ? 'PaymentPending' : 'Pending', at: new Date().toISOString(), note: 'Order placed' }],
       createdAt: new Date().toISOString(),
     };
     await db.collection('orders').insertOne(order);
     const { _id, ...clean } = order;
     return json({ ok: true, order: clean });
+  }
+
+  // Razorpay: create a payment order tied to an internal orderId
+  if (root === 'razorpay' && rest[0] === 'order' && method === 'POST') {
+    const rzp = getRazorpay();
+    if (!rzp) return json({ error: 'Razorpay keys not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env and restart.' }, 503);
+    const { orderId } = await req.json();
+    if (!orderId) return json({ error: 'orderId required' }, 400);
+    const db = await getDb();
+    const dbOrder = await db.collection('orders').findOne({ id: orderId });
+    if (!dbOrder) return json({ error: 'Order not found' }, 404);
+    if (dbOrder.status === 'Confirmed') return json({ error: 'Order already confirmed' }, 409);
+    if (dbOrder.payment === 'cod') return json({ error: 'COD order cannot use Razorpay' }, 409);
+
+    // Reuse existing razorpay order if present (idempotent retries)
+    if (dbOrder.razorpayOrderId) {
+      return json({
+        keyId: process.env.RAZORPAY_KEY_ID,
+        razorpayOrderId: dbOrder.razorpayOrderId,
+        amount: dbOrder.totalPaise,
+        currency: 'INR',
+        internalOrderId: dbOrder.id,
+      });
+    }
+
+    const amount = Number(dbOrder.totalPaise);
+    if (!Number.isSafeInteger(amount) || amount <= 0) return json({ error: 'Invalid amount' }, 422);
+
+    const rpOrder = await rzp.orders.create({
+      amount, currency: 'INR', receipt: dbOrder.id,
+      notes: { internalOrderId: dbOrder.id, customer: dbOrder.customer?.name || '' },
+    });
+
+    await db.collection('orders').updateOne(
+      { id: dbOrder.id },
+      { $set: { razorpayOrderId: rpOrder.id, razorpayOrderCreatedAt: new Date().toISOString() } }
+    );
+
+    return json({
+      keyId: process.env.RAZORPAY_KEY_ID,
+      razorpayOrderId: rpOrder.id,
+      amount: rpOrder.amount,
+      currency: rpOrder.currency,
+      internalOrderId: dbOrder.id,
+    });
+  }
+
+  // Razorpay: verify HMAC + payment status, mark Confirmed
+  if (root === 'razorpay' && rest[0] === 'verify' && method === 'POST') {
+    const rzp = getRazorpay();
+    if (!rzp) return json({ error: 'Razorpay keys not configured' }, 503);
+    const body = await req.json();
+    const { orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+    if (!orderId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return json({ error: 'Incomplete payment response' }, 400);
+    }
+
+    const db = await getDb();
+    const dbOrder = await db.collection('orders').findOne({ id: orderId, razorpayOrderId: razorpay_order_id });
+    if (!dbOrder) return json({ error: 'Order mismatch' }, 404);
+
+    const expected = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (!safeEqualHex(expected, razorpay_signature)) {
+      await db.collection('orders').updateOne({ id: dbOrder.id }, { $set: { status: 'Failed' } });
+      return json({ error: 'Invalid payment signature' }, 400);
+    }
+
+    // Signature valid — cross-check payment on Razorpay before fulfilment
+    const payment = await rzp.payments.fetch(razorpay_payment_id);
+    if (payment.order_id !== razorpay_order_id || payment.currency !== 'INR' || payment.amount !== dbOrder.totalPaise) {
+      return json({ error: 'Payment details do not match order' }, 400);
+    }
+
+    if (payment.status !== 'captured') {
+      await db.collection('orders').updateOne(
+        { id: dbOrder.id, status: { $ne: 'Confirmed' } },
+        { $set: { status: 'PaymentPending', razorpayPaymentId: razorpay_payment_id } }
+      );
+      return json({ ok: true, status: payment.status });
+    }
+
+    await db.collection('orders').updateOne(
+      { id: dbOrder.id, status: { $ne: 'Confirmed' } },
+      {
+        $set: {
+          status: 'Confirmed',
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+          paymentVerifiedAt: new Date().toISOString(),
+        },
+        $push: { timeline: { status: 'Confirmed', at: new Date().toISOString(), note: `Razorpay payment ${razorpay_payment_id} captured` } },
+      }
+    );
+
+    const confirmed = await db.collection('orders').findOne({ id: dbOrder.id });
+    delete confirmed._id;
+    return json({ ok: true, status: 'Confirmed', order: confirmed });
+  }
+
+  if (root === 'razorpay' && rest[0] === 'config' && method === 'GET') {
+    return json({ configured: !!getRazorpay(), keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || null });
   }
 
   if (root === 'orders' && method === 'GET' && rest[0]) {
