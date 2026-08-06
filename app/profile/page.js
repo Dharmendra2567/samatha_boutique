@@ -104,6 +104,17 @@ export default function ProfilePage() {
                   {user.role} Account
                 </Badge>
                 
+                <div className="mt-4 text-xs text-left space-y-2 text-muted-foreground border-t border-gold/15 pt-4">
+                  <div>
+                    <span className="font-semibold text-foreground uppercase tracking-wider block text-[10px]">Phone</span>
+                    <span>{user.phone || 'Not provided'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground uppercase tracking-wider block text-[10px]">Delivery Address</span>
+                    <span className="block whitespace-pre-wrap">{user.address || 'No address saved'}</span>
+                  </div>
+                </div>
+
                 <Separator className="my-6 bg-gold/15" />
 
                 <Button

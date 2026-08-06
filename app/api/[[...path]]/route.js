@@ -206,8 +206,10 @@ async function router(req, method, segments) {
     const sub = rest[0];
 
     if (sub === 'signup' && method === 'POST') {
-      const { name, email, password } = await req.json();
-      if (!name || !email || !password) return json({ error: 'Name, email, and password required' }, 400);
+      const { name, email, password, phone, address } = await req.json();
+      if (!name || !email || !password || !phone) {
+        return json({ error: 'Name, email, password, and phone number are required' }, 400);
+      }
 
       const normalizedEmail = email.toLowerCase().trim();
       const existing = await db.collection('users').findOne({ email: normalizedEmail });
@@ -218,6 +220,8 @@ async function router(req, method, segments) {
         id: `usr-${uuidv4().slice(0, 8)}`,
         name: name.trim(),
         email: normalizedEmail,
+        phone: phone.trim(),
+        address: address ? address.trim() : '',
         passwordHash: credentials.hash,
         salt: credentials.salt,
         role: 'customer',
@@ -229,7 +233,7 @@ async function router(req, method, segments) {
 
       const token = signToken({ id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role });
 
-      const cleanUser = { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role };
+      const cleanUser = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, address: newUser.address, role: newUser.role };
       const response = json({ ok: true, user: cleanUser });
       response.cookies.set('session_token', token, {
         httpOnly: true,
@@ -256,7 +260,14 @@ async function router(req, method, segments) {
 
       const token = signToken({ id: user.id, name: user.name, email: user.email, role: user.role });
 
-      const cleanUser = { id: user.id, name: user.name, email: user.email, role: user.role };
+      const cleanUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        address: user.address || '',
+        role: user.role
+      };
       const response = json({ ok: true, user: cleanUser });
       response.cookies.set('session_token', token, {
         httpOnly: true,
@@ -283,8 +294,21 @@ async function router(req, method, segments) {
     }
 
     if (sub === 'me' && method === 'GET') {
-      const user = getSessionUser(req);
-      return json({ user });
+      const decodedUser = getSessionUser(req);
+      if (!decodedUser) return json({ user: null });
+      
+      const user = await db.collection('users').findOne({ id: decodedUser.id });
+      if (!user) return json({ user: null });
+      
+      const cleanUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        address: user.address || '',
+        role: user.role
+      };
+      return json({ user: cleanUser });
     }
 
     return json({ error: 'Auth route not found' }, 404);
@@ -768,12 +792,59 @@ async function router(req, method, segments) {
         return json({ users: cleanUsers });
       }
 
-      if (method === 'PUT' && id) {
-        const { role } = await req.json();
+      if (method === 'POST') {
+        const { name, email, password, phone, address, role } = await req.json();
+        if (!name || !email || !password || !phone || !role) {
+          return json({ error: 'Name, email, password, phone number, and role are required' }, 400);
+        }
         if (role !== 'admin' && role !== 'customer') {
           return json({ error: 'Invalid role value' }, 400);
         }
-        const updateResult = await db.collection('users').updateOne({ id }, { $set: { role } });
+
+        const normalizedEmail = email.toLowerCase().trim();
+        const existing = await db.collection('users').findOne({ email: normalizedEmail });
+        if (existing) return json({ error: 'An account with this email already exists' }, 409);
+
+        const credentials = hashPassword(password);
+        const newUser = {
+          id: `usr-${uuidv4().slice(0, 8)}`,
+          name: name.trim(),
+          email: normalizedEmail,
+          phone: phone.trim(),
+          address: address ? address.trim() : '',
+          passwordHash: credentials.hash,
+          salt: credentials.salt,
+          role,
+          createdAt: new Date().toISOString()
+        };
+
+        await db.collection('users').insertOne(newUser);
+        const cleanUser = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, address: newUser.address, role: newUser.role, createdAt: newUser.createdAt };
+        return json({ ok: true, user: cleanUser });
+      }
+
+      if (method === 'PUT' && id) {
+        const { name, email, phone, address, role } = await req.json();
+        const updateFields = {};
+        
+        if (name !== undefined) updateFields.name = name.trim();
+        if (email !== undefined) {
+          const normalizedEmail = email.toLowerCase().trim();
+          updateFields.email = normalizedEmail;
+          // Check uniqueness
+          const existing = await db.collection('users').findOne({ email: normalizedEmail, id: { $ne: id } });
+          if (existing) return json({ error: 'An account with this email already exists' }, 409);
+        }
+        if (phone !== undefined) updateFields.phone = phone.trim();
+        if (address !== undefined) updateFields.address = address.trim();
+        if (role !== undefined) {
+          if (role !== 'admin' && role !== 'customer') {
+            return json({ error: 'Invalid role value' }, 400);
+          }
+          updateFields.role = role;
+        }
+
+        const updateResult = await db.collection('users').updateOne({ id }, { $set: updateFields });
         if (updateResult.matchedCount === 0) return json({ error: 'User not found' }, 404);
         return json({ ok: true });
       }

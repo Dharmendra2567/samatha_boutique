@@ -115,10 +115,10 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button size="lg" onClick={() => { addItem(p, qty); toast.success('Added to bag', { description: p.name }); }} className="flex-1 bg-white border-2 border-maroon text-maroon hover:bg-maroon hover:text-cream rounded-full h-[52px] sm:h-14 text-base font-semibold transition-all">
+              <Button onClick={() => { addItem(p, qty); toast.success('Added to bag', { description: p.name }); }} className="flex-1 bg-white border-2 border-maroon text-maroon hover:bg-maroon hover:text-cream rounded-full py-6 font-semibold transition-all">
                 <ShoppingBag className="w-5 h-5 mr-2 shrink-0" /> Add to Bag
               </Button>
-              <Button size="lg" onClick={buyNow} className="flex-1 bg-maroon hover:bg-maroon-light text-cream rounded-full h-[52px] sm:h-14 text-base font-semibold transition-all">
+              <Button onClick={buyNow} className="flex-1 bg-maroon hover:bg-maroon-light text-cream rounded-full py-6 font-semibold transition-all">
                 <Zap className="w-5 h-5 mr-2 shrink-0" /> Buy Now
               </Button>
             </div>

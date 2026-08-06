@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Eye, EyeOff, Phone, MapPin } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +26,8 @@ export default function LoginPage() {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupPhone, setSignupPhone] = useState('+91 ');
+  const [signupAddress, setSignupAddress] = useState('');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -58,10 +60,10 @@ export default function LoginPage() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!signupName || !signupEmail || !signupPassword) return;
+    if (!signupName || !signupEmail || !signupPassword || !signupPhone) return;
     setLoading(true);
     try {
-      const loggedUser = await signup(signupName, signupEmail, signupPassword);
+      const loggedUser = await signup(signupName, signupEmail, signupPassword, signupPhone, signupAddress);
       if (loggedUser.role === 'admin') {
         router.push('/admin');
       } else {
@@ -170,9 +172,7 @@ export default function LoginPage() {
                       'Sign In'
                     )}
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Demo credentials - Admin: <span className="font-mono text-foreground font-semibold">admin@samatha.com / admin123</span>
-                  </p>
+
                 </CardFooter>
               </form>
             </TabsContent>
@@ -238,6 +238,35 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 w-4.5 h-4.5 text-muted-foreground" />
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="+91 9988776655"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(e.target.value)}
+                        className="pl-10 focus-visible:ring-maroon"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-address">Delivery Address</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 w-4.5 h-4.5 text-muted-foreground" />
+                      <Input
+                        id="signup-address"
+                        type="text"
+                        placeholder="House / Flat No, Street, City, State, Pincode"
+                        value={signupAddress}
+                        onChange={(e) => setSignupAddress(e.target.value)}
+                        className="pl-10 focus-visible:ring-maroon"
+                      />
+                    </div>
+                  </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4 pt-4 pb-8">
                   <Button
@@ -253,9 +282,7 @@ export default function LoginPage() {
                       'Register Now'
                     )}
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Demo credentials - Customer: <span className="font-mono text-foreground font-semibold">customer@samatha.com / customer123</span>
-                  </p>
+
                 </CardFooter>
               </form>
             </TabsContent>

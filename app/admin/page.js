@@ -44,6 +44,17 @@ export default function AdminPage() {
   const [usersList, setUsersList] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [userFilter, setUserFilter] = useState('');
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '+91 ',
+    address: '',
+    role: 'customer'
+  });
 
   // Sales (POS) states
   const [sales, setSales] = useState([]);
@@ -393,16 +404,60 @@ export default function AdminPage() {
   };
 
   // User Management Handlers
-  const handleUpdateUserRole = async (userId, newRole) => {
+  const handleCreateUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!userForm.name || !userForm.email || !userForm.password || !userForm.phone) {
+      toast.error('All fields except address are required');
+      return;
+    }
     try {
-      const { data } = await axios.put(`/api/admin/users/${userId}`, { role: newRole });
-      if (data.ok) {
-        toast.success(`User role updated to ${newRole}`);
-        setUsersList(usersList.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      const { data } = await axios.post('/api/admin/users', userForm);
+      if (data.ok && data.user) {
+        toast.success(`User ${data.user.name} created successfully!`);
+        setUsersList([data.user, ...usersList]);
+        setIsAddUserOpen(false);
+        setUserForm({ name: '', email: '', password: '', phone: '+91 ', address: '', role: 'customer' });
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update user role');
+      toast.error(err.response?.data?.error || 'Failed to create user');
     }
+  };
+
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+      const { data } = await axios.put(`/api/admin/users/${editingUser.id}`, userForm);
+      if (data.ok) {
+        toast.success('User updated successfully');
+        setUsersList(usersList.map(u => u.id === editingUser.id ? { 
+          ...u, 
+          name: userForm.name, 
+          email: userForm.email, 
+          phone: userForm.phone, 
+          address: userForm.address, 
+          role: userForm.role 
+        } : u));
+        setIsEditUserOpen(false);
+        setEditingUser(null);
+        setUserForm({ name: '', email: '', password: '', phone: '+91 ', address: '', role: 'customer' });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update user');
+    }
+  };
+
+  const startEditUser = (u) => {
+    setEditingUser(u);
+    setUserForm({
+      name: u.name || '',
+      email: u.email || '',
+      password: '', // Password is not modified here
+      phone: u.phone || '+91 ',
+      address: u.address || '',
+      role: u.role || 'customer'
+    });
+    setIsEditUserOpen(true);
   };
 
   const handleDeleteUser = async (userId) => {
@@ -1242,12 +1297,99 @@ export default function AdminPage() {
                     <CardTitle className="font-serif text-2xl text-maroon-dark">User Management</CardTitle>
                     <CardDescription>View registered customers, manage roles, and delete accounts</CardDescription>
                   </div>
-                  <Input
-                    placeholder="Search user name, email..."
-                    value={userFilter}
-                    onChange={(e) => setUserFilter(e.target.value)}
-                    className="max-w-xs focus-visible:ring-maroon"
-                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-maroon hover:bg-maroon-light text-cream rounded-full px-4 text-xs font-semibold">
+                          Create New User
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Create New User Account</DialogTitle>
+                          <DialogDescription>Add a new customer or administrator to the database.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateUserSubmit} className="space-y-4 pt-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-name">Full Name</Label>
+                            <Input
+                              id="admin-create-name"
+                              value={userForm.name}
+                              onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                              placeholder="Name"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-email">Email Address</Label>
+                            <Input
+                              id="admin-create-email"
+                              type="email"
+                              value={userForm.email}
+                              onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                              placeholder="you@example.com"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-password">Password</Label>
+                            <Input
+                              id="admin-create-password"
+                              type="password"
+                              value={userForm.password}
+                              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                              placeholder="Minimum 6 characters"
+                              minLength={6}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-phone">Phone Number</Label>
+                            <Input
+                              id="admin-create-phone"
+                              type="tel"
+                              value={userForm.phone}
+                              onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                              placeholder="+91 9988776655"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-address">Delivery Address</Label>
+                            <Input
+                              id="admin-create-address"
+                              value={userForm.address}
+                              onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
+                              placeholder="Optional Address"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="admin-create-role">Role</Label>
+                            <select
+                              id="admin-create-role"
+                              value={userForm.role}
+                              onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-maroon"
+                            >
+                              <option value="customer">Customer</option>
+                              <option value="admin">Administrator</option>
+                            </select>
+                          </div>
+                          <DialogFooter className="pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsAddUserOpen(false)} className="rounded-full px-5">Cancel</Button>
+                            <Button type="submit" className="bg-maroon hover:bg-maroon-light text-cream rounded-full px-5">Save Account</Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Input
+                      placeholder="Search user name, email..."
+                      value={userFilter}
+                      onChange={(e) => setUserFilter(e.target.value)}
+                      className="max-w-xs focus-visible:ring-maroon"
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-6">
                   {usersLoading ? (
@@ -1262,6 +1404,8 @@ export default function AdminPage() {
                             <TableHead>User ID</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Address</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead>Created Date</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -1273,6 +1417,8 @@ export default function AdminPage() {
                               <TableCell className="font-mono text-xs font-bold">{u.id}</TableCell>
                               <TableCell className="font-semibold">{u.name}</TableCell>
                               <TableCell className="font-mono text-xs">{u.email}</TableCell>
+                              <TableCell className="font-mono text-xs">{u.phone || 'N/A'}</TableCell>
+                              <TableCell className="text-xs max-w-[150px] truncate" title={u.address}>{u.address || 'N/A'}</TableCell>
                               <TableCell>
                                 <Badge variant={u.role === 'admin' ? 'success' : 'outline'} className="capitalize text-xs">
                                   {u.role}
@@ -1282,26 +1428,14 @@ export default function AdminPage() {
                                 {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN') : 'N/A'}
                               </TableCell>
                               <TableCell className="text-right whitespace-nowrap space-x-1">
-                                {u.role === 'admin' ? (
-                                  <Button
-                                    size="xs"
-                                    variant="ghost"
-                                    onClick={() => handleUpdateUserRole(u.id, 'customer')}
-                                    className="text-xs text-maroon hover:text-maroon-dark font-medium h-7"
-                                    disabled={u.email === user.email} /* Prevent self-demotion */
-                                  >
-                                    Make Customer
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="xs"
-                                    variant="ghost"
-                                    onClick={() => handleUpdateUserRole(u.id, 'admin')}
-                                    className="text-xs text-maroon hover:text-maroon-dark font-medium h-7"
-                                  >
-                                    Make Admin
-                                  </Button>
-                                )}
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  onClick={() => startEditUser(u)}
+                                  className="text-xs text-maroon hover:text-maroon-dark font-medium h-7"
+                                >
+                                  Edit
+                                </Button>
                                 <Button
                                   size="icon"
                                   variant="ghost"
@@ -1672,6 +1806,78 @@ export default function AdminPage() {
               <Button type="submit" className="bg-maroon hover:bg-maroon-light text-cream rounded-full">Save Changes</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT USER DIALOG */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User Details</DialogTitle>
+            <DialogDescription>Modify settings for this user account.</DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleEditUserSubmit} className="space-y-4 pt-2">
+              <div className="space-y-1">
+                <Label htmlFor="admin-edit-name">Full Name</Label>
+                <Input
+                  id="admin-edit-name"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  placeholder="Name"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admin-edit-email">Email Address</Label>
+                <Input
+                  id="admin-edit-email"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admin-edit-phone">Phone Number</Label>
+                <Input
+                  id="admin-edit-phone"
+                  type="tel"
+                  value={userForm.phone}
+                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                  placeholder="+91 9988776655"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admin-edit-address">Delivery Address</Label>
+                <Input
+                  id="admin-edit-address"
+                  value={userForm.address}
+                  onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
+                  placeholder="Optional Address"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="admin-edit-role">Role</Label>
+                <select
+                  id="admin-edit-role"
+                  value={userForm.role}
+                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-maroon"
+                  disabled={editingUser.email === user.email} /* Prevent self-role-change */
+                >
+                  <option value="customer">Customer</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditUserOpen(false)} className="rounded-full px-5">Cancel</Button>
+                <Button type="submit" className="bg-maroon hover:bg-maroon-light text-cream rounded-full px-5">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
