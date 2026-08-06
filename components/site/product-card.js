@@ -7,7 +7,7 @@ import { useCart } from '@/lib/cart-context';
 import { Button } from '@/components/ui/button';
 
 export default function ProductCard({ product, priority = false }) {
-  const { addItem } = useCart();
+  const { addItem, toggleWishlist, isInWishlist } = useCart();
   const p = product;
   return (
     <div className="group relative bg-white rounded-xl overflow-hidden hover-lift border border-border/50">
@@ -30,10 +30,14 @@ export default function ProductCard({ product, priority = false }) {
         )}
         <button
           type="button"
-          onClick={(e) => { e.preventDefault(); toast.success('Added to wishlist'); }}
-          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(p);
+          }}
+          className={`absolute bottom-3 right-3 w-9 h-9 rounded-full backdrop-blur flex items-center justify-center transition shadow-sm z-10 ${isInWishlist(p.id) ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-white/90 text-maroon hover:bg-white'}`}
         >
-          <Heart className="w-4 h-4 text-maroon" />
+          <Heart className={`w-4 h-4 ${isInWishlist(p.id) ? 'fill-white text-white' : 'text-maroon'}`} />
         </button>
       </Link>
       <div className="p-4 space-y-2">
@@ -47,8 +51,8 @@ export default function ProductCard({ product, priority = false }) {
           <span>({p.reviewCount})</span>
         </div>
         <div className="flex items-baseline gap-2 pt-1">
-          <span className="font-serif text-lg font-semibold text-maroon">₹{p.price.toLocaleString('en-IN')}</span>
-          {p.mrp > p.price && <span className="text-xs line-through text-muted-foreground">₹{p.mrp.toLocaleString('en-IN')}</span>}
+          <span className="font-sans text-lg font-semibold text-maroon">₹{p.price.toLocaleString('en-IN')}</span>
+          {p.mrp > p.price && <span className="font-sans text-xs line-through text-muted-foreground">₹{p.mrp.toLocaleString('en-IN')}</span>}
         </div>
         <Button
           onClick={() => { addItem(p); toast.success('Added to bag', { description: p.name }); }}

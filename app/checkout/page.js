@@ -6,6 +6,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { CheckCircle2, Truck, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
+import { useAuth } from '@/lib/auth-context';
 import Header from '@/components/site/header';
 import Footer from '@/components/site/footer';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, savings, shipping, total, clear } = useCart();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [placing, setPlacing] = useState(false);
   const [order, setOrder] = useState(null);
@@ -28,6 +30,17 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
+    if (user) {
+      setForm((f) => ({
+        ...f,
+        name: user.name || f.name,
+        email: user.email || f.email,
+        phone: user.phone || f.phone || '',
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
     axios.get('/api/razorpay/config').then(({ data }) => {
       setRzpConfigured(!!data.configured);
       setRzpKeyId(data.keyId || null);
@@ -38,26 +51,137 @@ export default function CheckoutPage() {
   if (order) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-16 max-w-2xl text-center">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+        {/* Web UI only - Hidden during printing */}
+        <div className="print:hidden">
+          <Header />
+          <div className="container mx-auto px-4 py-16 max-w-2xl text-center">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <h1 className="font-serif text-4xl text-maroon-dark mt-6">Order Confirmed!</h1>
+            <p className="text-muted-foreground mt-3">Thank you for shopping with Samatha Reddy Sarees Collection & Boutique Services. A confirmation has been sent.</p>
+            <div className="bg-white rounded-xl border border-gold/30 p-6 mt-8 text-left">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order ID</span><span className="font-mono font-medium">{order.id}</span></div>
+              <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Total</span><span className="font-sans text-lg text-maroon font-bold">₹{order.total.toLocaleString('en-IN')}</span></div>
+              <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment</span><span className="font-medium">{order.payment === 'cod' ? 'Cash on Delivery' : 'Razorpay'}</span></div>
+              {order.razorpayPaymentId && <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment ID</span><span className="font-mono text-xs">{order.razorpayPaymentId}</span></div>}
+              <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Status</span><span className="font-medium text-green-700">{order.status}</span></div>
+            </div>
+            <div className="flex gap-3 mt-8 justify-center">
+              <Button variant="outline" onClick={() => router.push('/')}>Continue Shopping</Button>
+              <Button className="bg-maroon hover:bg-maroon-light text-cream" onClick={() => window.print()}>Download Invoice</Button>
+            </div>
           </div>
-          <h1 className="font-serif text-4xl text-maroon-dark mt-6">Order Confirmed!</h1>
-          <p className="text-muted-foreground mt-3">Thank you for shopping with Samatha Reddy Boutique. A confirmation has been sent.</p>
-          <div className="bg-white rounded-xl border border-gold/30 p-6 mt-8 text-left">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order ID</span><span className="font-mono font-medium">{order.id}</span></div>
-            <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Total</span><span className="font-serif text-lg text-maroon font-bold">₹{order.total.toLocaleString('en-IN')}</span></div>
-            <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment</span><span className="font-medium">{order.payment === 'cod' ? 'Cash on Delivery' : 'Razorpay'}</span></div>
-            {order.razorpayPaymentId && <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Payment ID</span><span className="font-mono text-xs">{order.razorpayPaymentId}</span></div>}
-            <div className="flex justify-between text-sm mt-2"><span className="text-muted-foreground">Status</span><span className="font-medium text-green-700">{order.status}</span></div>
+          <Footer />
+        </div>
+
+        {/* Print-only Invoice Template */}
+        <div className="hidden print:block bg-white p-8 text-black min-h-screen font-sans">
+          {/* Header Section */}
+          <div className="border-b-2 border-maroon pb-6 flex justify-between items-start">
+            <div>
+              <h1 className="font-serif text-3xl font-bold text-maroon leading-none">Samatha Reddy</h1>
+              <p className="text-[10px] tracking-[0.12em] text-gold-dark uppercase mt-1 font-semibold">Sarees Collection & Boutique Services</p>
+              <p className="text-xs text-muted-foreground mt-3">Road No. 12, Banjara Hills, Hyderabad, Telangana - 500034</p>
+              <p className="text-xs text-muted-foreground">Email: contact@samathareddy.com | Phone: +91 99887 76655</p>
+            </div>
+            <div className="text-right">
+              <h2 className="font-serif text-2xl font-bold text-maroon uppercase tracking-wider">Invoice</h2>
+              <p className="text-sm font-mono mt-1"><span className="font-semibold">Invoice No:</span> {order.id}</p>
+              <p className="text-xs text-muted-foreground mt-1"><span className="font-semibold">Date:</span> {new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            </div>
           </div>
-          <div className="flex gap-3 mt-8 justify-center">
-            <Button variant="outline" onClick={() => router.push('/')}>Continue Shopping</Button>
-            <Button className="bg-maroon hover:bg-maroon-light text-cream" onClick={() => window.print()}>Download Invoice</Button>
+
+          {/* Billing & Shipping Addresses */}
+          <div className="grid grid-cols-2 gap-8 my-8 text-sm">
+            <div className="space-y-1">
+              <h3 className="font-serif text-xs uppercase tracking-wider text-muted-foreground font-semibold border-b border-border pb-1 mb-2">Billed To</h3>
+              <p className="font-semibold text-base text-foreground">{order.customer?.name}</p>
+              {order.customer?.email && <p className="text-muted-foreground">{order.customer.email}</p>}
+              {order.customer?.phone && <p className="text-muted-foreground">Phone: {order.customer.phone}</p>}
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif text-xs uppercase tracking-wider text-muted-foreground font-semibold border-b border-border pb-1 mb-2">Shipped To</h3>
+              <p className="font-semibold text-base text-foreground">{order.customer?.name}</p>
+              <p className="text-muted-foreground">{order.shippingAddress?.line1}</p>
+              {order.shippingAddress?.landmark && <p className="text-muted-foreground">Landmark: {order.shippingAddress.landmark}</p>}
+              <p className="text-muted-foreground">{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}</p>
+            </div>
+          </div>
+
+          {/* Payment Info Box */}
+          <div className="bg-cream rounded-lg p-4 mb-8 text-sm grid grid-cols-2 gap-4 border border-gold/20">
+            <div>
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">Payment Method</span>
+              <span className="font-medium mt-1 block text-maroon">{order.payment === 'cod' ? 'Cash on Delivery (COD)' : 'Razorpay (Online Payment)'}</span>
+            </div>
+            <div>
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">Payment Status</span>
+              <span className="font-semibold text-green-700 mt-1 block uppercase tracking-wider text-xs">{order.status === 'Confirmed' ? 'Paid & Confirmed' : order.status}</span>
+              {order.razorpayPaymentId && <span className="text-[11px] text-muted-foreground block font-mono">TXN: {order.razorpayPaymentId}</span>}
+            </div>
+          </div>
+
+          {/* Line Items Table */}
+          <table className="w-full mb-8 text-sm border-collapse text-left">
+            <thead>
+              <tr className="border-b-2 border-gold/30 text-xs uppercase text-maroon font-semibold">
+                <th className="py-3 w-8">#</th>
+                <th className="py-3">Item Description</th>
+                <th className="py-3 text-center w-16">Qty</th>
+                <th className="py-3 text-right w-32">Unit Price</th>
+                <th className="py-3 text-right w-32">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.items?.map((item, idx) => (
+                <tr key={item.id || idx} className="border-b border-border/40 align-top">
+                  <td className="py-3 font-mono text-muted-foreground">{idx + 1}</td>
+                  <td className="py-3">
+                    <span className="font-medium text-foreground block">{item.name}</span>
+                    <span className="text-[10px] text-muted-foreground">ID: {item.id}</span>
+                  </td>
+                  <td className="py-3 text-center text-muted-foreground">{item.qty || item.quantity}</td>
+                  <td className="py-3 text-right">₹{(item.price || 0).toLocaleString('en-IN')}</td>
+                  <td className="py-3 text-right font-medium text-foreground">₹{((item.price || 0) * (item.qty || item.quantity || 1)).toLocaleString('en-IN')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Pricing Summary */}
+          <div className="flex justify-end text-sm">
+            <div className="w-80 space-y-2.5">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span>₹{(order.subtotal || 0).toLocaleString('en-IN')}</span>
+              </div>
+              {order.savings > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Savings</span>
+                  <span className="font-sans">− ₹{(order.savings || 0).toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping</span>
+                <span className="font-sans">{order.shipping === 0 ? 'FREE' : `₹${order.shipping}`}</span>
+              </div>
+              <div className="flex justify-between font-sans text-lg font-bold text-maroon pt-3 border-t-2 border-maroon">
+                <span>Total Amount</span>
+                <span className="font-sans">₹{(order.total || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Terms & Thank You */}
+          <div className="mt-20 pt-8 border-t border-border/60 text-xs text-muted-foreground text-center space-y-2">
+            <p className="font-serif text-sm font-semibold text-maroon">Thank you for shopping with Samatha Reddy!</p>
+            <p>We appreciate your purchase of our custom designs and handcrafted textiles.</p>
+            <p className="text-[10px] pt-2 border-t border-gold/10 max-w-md mx-auto">
+              This is a computer-generated invoice. For returns or support, please email support@samathareddy.com within 7 days of delivery.
+            </p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -93,7 +217,7 @@ export default function CheckoutPage() {
         amount,
         currency,
         order_id: razorpayOrderId,
-        name: 'Samatha Reddy Boutique',
+        name: 'Samatha Reddy Sarees Collection & Boutique Services',
         description: `Order ${internalOrderId}`,
         image: '/favicon.ico',
         prefill: { name: form.name, email: form.email, contact: form.phone },
@@ -267,7 +391,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
                 {savings > 0 && <div className="flex justify-between text-green-700"><span>Savings</span><span>− ₹{savings.toLocaleString('en-IN')}</span></div>}
                 <div className="flex justify-between"><span>Shipping</span><span className={shipping === 0 ? 'text-green-700' : ''}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</span></div>
-                <div className="flex justify-between font-serif text-lg font-bold text-maroon pt-2 border-t"><span>Total</span><span>₹{total.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between font-sans text-lg font-bold text-maroon pt-2 border-t"><span>Total</span><span className="font-sans">₹{total.toLocaleString('en-IN')}</span></div>
               </div>
             </div>
           </aside>

@@ -43,8 +43,8 @@ export default function CartPage() {
                 <div className="flex-1 min-w-0">
                   <Link href={`/products/${i.id}`} className="font-medium text-foreground hover:text-maroon line-clamp-2">{i.name}</Link>
                   <div className="flex items-baseline gap-2 mt-2">
-                    <span className="font-serif text-lg font-semibold text-maroon">₹{i.price.toLocaleString('en-IN')}</span>
-                    {i.mrp > i.price && <span className="text-xs line-through text-muted-foreground">₹{i.mrp.toLocaleString('en-IN')}</span>}
+                    <span className="font-sans text-lg font-semibold text-maroon">₹{i.price.toLocaleString('en-IN')}</span>
+                    {i.mrp > i.price && <span className="font-sans text-xs line-through text-muted-foreground">₹{i.mrp.toLocaleString('en-IN')}</span>}
                   </div>
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center border border-border rounded-full">
@@ -62,11 +62,11 @@ export default function CartPage() {
           <aside className="lg:sticky lg:top-32 h-fit">
             <div className="bg-white rounded-xl border border-border/50 p-6 space-y-4">
               <h3 className="font-serif text-xl text-maroon-dark">Price Details</h3>
-              <div className="flex justify-between text-sm"><span>Subtotal</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
-              {savings > 0 && <div className="flex justify-between text-sm text-green-700"><span>You save</span><span>− ₹{savings.toLocaleString('en-IN')}</span></div>}
-              <div className="flex justify-between text-sm"><span>Shipping</span><span className={shipping === 0 ? 'text-green-700' : ''}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</span></div>
+              <div className="flex justify-between text-sm"><span>Subtotal</span><span className="font-sans">₹{subtotal.toLocaleString('en-IN')}</span></div>
+              {savings > 0 && <div className="flex justify-between text-sm text-green-700"><span>You save</span><span className="font-sans">− ₹{savings.toLocaleString('en-IN')}</span></div>}
+              <div className="flex justify-between text-sm"><span>Shipping</span><span className={shipping === 0 ? 'text-green-700 font-sans' : 'font-sans'}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</span></div>
               <div className="flex items-center gap-2 bg-cream rounded-lg p-3 text-sm text-gold-dark"><Tag className="w-4 h-4" /> Apply coupon at checkout</div>
-              <div className="pt-3 border-t border-border/50 flex justify-between font-serif text-lg"><span>Total</span><span className="text-maroon font-bold">₹{total.toLocaleString('en-IN')}</span></div>
+              <div className="pt-3 border-t border-border/50 flex justify-between font-sans text-lg"><span>Total</span><span className="text-maroon font-bold font-sans">₹{total.toLocaleString('en-IN')}</span></div>
               <Link href="/checkout"><Button size="lg" className="w-full bg-maroon hover:bg-maroon-light text-cream rounded-full h-12">Proceed to Checkout <ArrowRight className="w-4 h-4 ml-2" /></Button></Link>
               <div className="text-[11px] text-muted-foreground text-center pt-2">Free shipping on orders above ₹2999 • Secure checkout</div>
             </div>

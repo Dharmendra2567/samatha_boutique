@@ -42,8 +42,8 @@ export default function HomePage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-br from-cream via-white to-blush">
-        <div className="container mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
+        <div className="container mx-auto px-4 pt-8 pb-16 md:py-24 grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+          <div className="space-y-6 order-2 md:order-1">
             <div className="inline-flex items-center gap-2 text-xs tracking-[0.3em] text-gold-dark uppercase">
               <Sparkles className="w-4 h-4" /> Hyderabad • Est. Hand-Curated
             </div>
@@ -65,7 +65,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2"><Award className="w-4 h-4 text-gold" /> Hyderabad boutique</div>
             </div>
           </div>
-          <div className="relative h-[500px] md:h-[620px]">
+          <div className="relative h-[500px] md:h-[620px] order-1 md:order-2">
             <div className="absolute -top-4 -right-4 w-72 h-96 rounded-2xl overflow-hidden shadow-2xl animate-float">
               <Image src="https://images.unsplash.com/photo-1600685890506-593fdf55949b?crop=entropy&cs=srgb&fm=jpg&q=85&w=800" alt="Bridal saree" fill className="object-cover" priority />
             </div>

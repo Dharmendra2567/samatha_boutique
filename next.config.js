@@ -5,4 +5,12 @@ module.exports = {
       { protocol: 'https', hostname: 'images.pexels.com' },
     ],
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = {
+        type: 'memory',
+      };
+    }
+    return config;
+  },
 };

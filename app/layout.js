@@ -1,6 +1,7 @@
 import { Playfair_Display, Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { CartProvider } from '@/lib/cart-context';
+import { AuthProvider } from '@/lib/auth-context';
 import './globals.css';
 
 const playfair = Playfair_Display({
@@ -17,19 +18,26 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: 'Samatha Reddy Boutique & Saree Collection | Hyderabad',
-  description: 'Premium Indian sarees, designer blouses, lehengas & boutique wear. Handpicked Banarasi, Kanjivaram, Pochampally silk sarees from Hyderabad, Telangana.',
-  keywords: 'sarees, boutique, hyderabad, kanjivaram, banarasi, pochampally, silk saree, lehenga, designer blouse',
+  title: 'Samatha Boutique | Samatha Reddy Sarees Collection & Boutique Services',
+  description: 'Premium Indian sarees, designer blouses, lehengas & boutique wear. Handpicked Banarasi, Kanjivaram, Pochampally silk sarees from Hyderabad, Nagole, Telangana.',
+  keywords: 'sarees, boutique, hyderabad, nagole, kanjivaram, banarasi, pochampally, silk saree, lehenga, designer blouse',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-background antialiased">
-        <CartProvider>
-          {children}
-          <Toaster position="top-center" richColors />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

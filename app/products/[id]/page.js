@@ -17,7 +17,7 @@ export default function ProductDetailPage() {
   const [data, setData] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
-  const { addItem } = useCart();
+  const { addItem, toggleWishlist, isInWishlist } = useCart();
   const router = useRouter();
 
   useEffect(() => {
@@ -83,8 +83,8 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="flex items-baseline gap-3 pb-4 border-b border-border/50">
-              <span className="font-serif text-4xl font-bold text-maroon">₹{p.price.toLocaleString('en-IN')}</span>
-              {p.mrp > p.price && <><span className="text-lg line-through text-muted-foreground">₹{p.mrp.toLocaleString('en-IN')}</span><span className="text-green-700 font-medium text-sm">You save ₹{(p.mrp - p.price).toLocaleString('en-IN')}</span></>}
+              <span className="font-sans text-4xl font-bold text-maroon">₹{p.price.toLocaleString('en-IN')}</span>
+              {p.mrp > p.price && <><span className="font-sans text-lg line-through text-muted-foreground">₹{p.mrp.toLocaleString('en-IN')}</span><span className="text-green-700 font-medium text-sm">You save ₹{(p.mrp - p.price).toLocaleString('en-IN')}</span></>}
             </div>
 
             <p className="text-foreground/80 leading-relaxed">{p.description}</p>
@@ -104,7 +104,14 @@ export default function ProductDetailPage() {
                 <span className="w-10 text-center font-medium">{qty}</span>
                 <button onClick={() => setQty(qty + 1)} className="w-10 h-10 hover:text-maroon">+</button>
               </div>
-              <Button variant="ghost" size="icon" className="border border-border rounded-full h-10 w-10" onClick={() => toast.success('Added to wishlist')}><Heart className="w-4 h-4" /></Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="border border-border rounded-full h-10 w-10 shadow-sm"
+                onClick={() => toggleWishlist(p)}
+              >
+                <Heart className={`w-4 h-4 ${isInWishlist(p.id) ? 'fill-red-600 text-red-600' : 'text-foreground'}`} />
+              </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">

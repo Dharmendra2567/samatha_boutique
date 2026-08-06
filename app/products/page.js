@@ -67,11 +67,11 @@ function CatalogInner() {
       <Header />
 
       {/* HERO */}
-      <section className="bg-gradient-to-br from-cream via-white to-blush py-12 md:py-16 border-b border-gold/20">
+      <section className="bg-gradient-to-br from-cream via-white to-blush py-6 md:py-8 border-b border-gold/20">
         <div className="container mx-auto px-4 text-center">
-          {activeCategory && <div className="text-xs tracking-[0.3em] text-gold-dark uppercase mb-2">{activeCategory.group}</div>}
-          <h1 className="font-serif text-4xl md:text-5xl text-maroon-dark">{headerTitle}</h1>
-          {activeCategory && <p className="text-muted-foreground mt-3 max-w-lg mx-auto">{activeCategory.tagline}</p>}
+          {activeCategory && <div className="text-[10px] md:text-xs tracking-[0.3em] text-gold-dark uppercase mb-1">{activeCategory.group}</div>}
+          <h1 className="font-serif text-3xl md:text-5xl text-maroon-dark leading-tight">{headerTitle}</h1>
+          {activeCategory && <p className="text-xs md:text-sm text-muted-foreground mt-1.5 max-w-lg mx-auto">{activeCategory.tagline}</p>}
         </div>
       </section>
 
