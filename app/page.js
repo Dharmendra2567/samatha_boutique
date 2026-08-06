@@ -65,21 +65,21 @@ export default function HomePage() {
               <div className="flex items-center gap-2"><Award className="w-4 h-4 text-gold" /> Hyderabad boutique</div>
             </div>
           </div>
-          <div className="relative h-[500px] md:h-[620px] order-1 md:order-2">
-            <div className="absolute -top-4 -right-4 w-72 h-96 rounded-2xl overflow-hidden shadow-2xl animate-float">
+          <div className="relative h-[400px] min-[380px]:h-[460px] sm:h-[540px] md:h-[620px] order-1 md:order-2">
+            <div className="absolute -top-2 right-0 sm:-top-4 sm:-right-4 w-44 h-60 min-[380px]:w-48 min-[380px]:h-64 sm:w-60 sm:h-80 md:w-72 md:h-96 rounded-2xl overflow-hidden shadow-2xl animate-float">
               <Image src="https://images.unsplash.com/photo-1600685890506-593fdf55949b?crop=entropy&cs=srgb&fm=jpg&q=85&w=800" alt="Bridal saree" fill className="object-cover" priority />
             </div>
-            <div className="absolute top-32 left-0 w-64 h-80 rounded-2xl overflow-hidden shadow-xl" style={{ animation: 'float 5s ease-in-out infinite 1s' }}>
+            <div className="absolute top-24 left-0 sm:top-32 w-40 h-52 min-[380px]:w-44 min-[380px]:h-56 sm:w-52 sm:h-64 md:w-64 md:h-80 rounded-2xl overflow-hidden shadow-xl" style={{ animation: 'float 5s ease-in-out infinite 1s' }}>
               <Image src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?crop=entropy&cs=srgb&fm=jpg&q=85&w=800" alt="Silk saree" fill className="object-cover" priority />
             </div>
-            <div className="absolute bottom-0 right-10 w-56 h-72 rounded-2xl overflow-hidden shadow-xl" style={{ animation: 'float 6s ease-in-out infinite 2s' }}>
+            <div className="absolute bottom-0 right-4 sm:right-10 w-36 h-48 min-[380px]:w-40 min-[380px]:h-52 sm:w-44 sm:h-60 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-xl" style={{ animation: 'float 6s ease-in-out infinite 2s' }}>
               <Image src="https://images.pexels.com/photos/17154861/pexels-photo-17154861.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=800&w=800" alt="Bridal" fill className="object-cover" />
             </div>
-            <div className="absolute bottom-8 -left-4 bg-white rounded-xl shadow-2xl p-4 flex items-center gap-3 max-w-[220px]">
-              <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center"><Sparkles className="w-5 h-5 text-white" /></div>
+            <div className="absolute bottom-4 left-0 sm:bottom-8 sm:-left-4 bg-white rounded-xl shadow-2xl p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 max-w-[160px] min-[380px]:max-w-[180px] sm:max-w-[220px]">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full gradient-gold flex items-center justify-center shrink-0"><Sparkles className="w-4 h-4 sm:w-5 h-5 text-white" /></div>
               <div>
-                <div className="font-serif font-semibold text-sm text-maroon">15,000+</div>
-                <div className="text-[10px] text-muted-foreground">Happy Brides Across India</div>
+                <div className="font-serif font-semibold text-xs sm:text-sm text-maroon">15,000+</div>
+                <div className="text-[8px] sm:text-[10px] text-muted-foreground leading-tight">Happy Brides Across India</div>
               </div>
             </div>
           </div>

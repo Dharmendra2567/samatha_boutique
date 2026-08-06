@@ -58,12 +58,12 @@ export default function Header() {
       <div className="bg-maroon text-cream text-xs py-2 text-center px-4">
         <span className="tracking-wider">✨ Free shipping on orders above ₹2999 &middot; Handcrafted in Hyderabad &middot; COD available across India</span>
       </div>
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3 shrink-0 group">
-          <img src="/logo.png" alt="Samatha Boutique Logo" className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border border-gold/20 shadow-sm bg-white" />
+      <div className="container mx-auto px-2 min-[360px]:px-4 py-3 md:py-4 flex items-center justify-between gap-1 min-[360px]:gap-4">
+        <Link href="/" className="flex items-center gap-1.5 min-[360px]:gap-3 shrink-0 group">
+          <img src="/logo.png" alt="Samatha Boutique Logo" className="w-8 h-8 min-[360px]:w-10 min-[360px]:h-10 md:w-12 md:h-12 rounded-full object-cover border border-gold/20 shadow-sm bg-white" />
           <div className="flex flex-col">
-            <span className="font-serif text-2xl md:text-3xl font-bold text-maroon leading-none">Samatha Reddy</span>
-            <span className="text-[9px] md:text-[10px] tracking-[0.12em] text-gold-dark uppercase mt-1 font-semibold">Sarees Collection & Boutique Services</span>
+            <span className="font-serif text-lg min-[360px]:text-xl sm:text-2xl md:text-3xl font-bold text-maroon leading-none">Samatha Reddy</span>
+            <span className="text-[7px] min-[360px]:text-[8px] sm:text-[9px] md:text-[10px] tracking-[0.1em] min-[360px]:tracking-[0.12em] text-gold-dark uppercase mt-0.5 sm:mt-1 font-semibold">Sarees Collection & Boutique Services</span>
           </div>
         </Link>
 
@@ -86,7 +86,7 @@ export default function Header() {
           )}
         </form>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-2">
           {user && user.role === 'admin' && (
             <Link href="/admin" className="hidden md:inline-flex mr-1">
               <Button variant="outline" size="sm" className="border-gold text-maroon hover:bg-cream/50 gap-1.5 h-9 rounded-full px-4 text-xs font-semibold">
@@ -97,7 +97,7 @@ export default function Header() {
           )}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative hidden md:inline-flex">
+              <Button variant="ghost" size="icon" className="relative hidden md:inline-flex w-8 h-8 sm:w-9 sm:h-9">
                 <Heart className={`w-5 h-5 ${hydrated && wishlist.length > 0 ? 'fill-maroon text-maroon' : ''}`} />
                 {hydrated && wishlist.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-maroon text-cream text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center">
@@ -153,23 +153,23 @@ export default function Header() {
             </PopoverContent>
           </Popover>
           <Link href={user ? '/profile' : '/login'}>
-            <Button variant="ghost" size="icon" className="relative">
-              <User className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="relative w-8 h-8 sm:w-9 sm:h-9">
+              <User className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               {user && (
-                <span className="absolute bottom-1 right-1 bg-green-500 rounded-full w-2.5 h-2.5 border-2 border-white" />
+                <span className="absolute bottom-0.5 right-0.5 bg-green-500 rounded-full w-2 h-2 border border-white" />
               )}
             </Button>
           </Link>
           <Link href="/cart" className="relative">
-            <Button variant="ghost" size="icon">
-              <ShoppingBag className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="w-8 h-8 sm:w-9 sm:h-9">
+              <ShoppingBag className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               {hydrated && count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-maroon text-cream text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center">{count}</span>
+                <span className="absolute -top-0.5 -right-0.5 bg-maroon text-cream text-[9px] font-semibold rounded-full w-4.5 h-4.5 flex items-center justify-center">{count}</span>
               )}
             </Button>
           </Link>
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMenu(!menu)}>
-            {menu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          <Button variant="ghost" size="icon" className="md:hidden w-8 h-8 sm:w-9 sm:h-9" onClick={() => setMenu(!menu)}>
+            {menu ? <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
           </Button>
         </div>
       </div>
